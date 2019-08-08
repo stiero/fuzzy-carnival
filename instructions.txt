@@ -1,0 +1,27 @@
+Exploratory Data Analysis
+
+Pls find attached anonymized transaction-wise sales data of a retailer with this email. 
+The dataset contains date, SKU code, brand, category, bill number, store code, sales qty, 
+MRP and SP (selling price), and a sale / return flag. It's right now in 9 different files. 
+
+We need you to analyze this sales data with the following in mind:
+
+    - There can be anomalies / issues in the data e.g. sometimes the Sales Price is more 
+    than MRP, or some duplicate entries - would need you to identify them and deal with them
+    
+    - When you identify any trend / pattern, e.g. store XYZ is the highest selling store, 
+    then we expect you to dig a little deeper to see if that is due to some 
+    particular category or brand, or whether it is during a particular set of month
+    
+    The key metrics to analyse are:
+        - Discount percent by store and month - deep dive by categories
+        - Sales qty by store and month - deep dive by categories
+        - Avg. selling price of product by store and month - deep dive by categories
+        - No. of unique SKUs sold by each store and month - deep dive by categories
+
+Forecasting
+
+We need you to forecast the weekly demand (sales qty) for Store 5. Here, you will need to 
+take reasonable assumptions regarding some features and apply some thoughts around what 
+features to create and which technique to use (ARIMA/ARIMAX vs. Linear Regression vs. 
+Decision Trees vs. LSTM). Pls share your feature engineering and choice of technique along with the rationale for it.
