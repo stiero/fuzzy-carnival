@@ -17,58 +17,31 @@ import seaborn as sns
 import datetime
 import numpy as np
 
-files = glob.glob("*.csv")
+files = glob.glob("data/*.csv")
 
 columns = ['sku', 'brand', 'cat', 'bill', 'store', 'date', 'type', 'mrp', 'price', 'qty']
 
-#df_dict = {}
-#
-#for file in files:
-#    df = pd.read_csv(file, names=columns, header=None)
-#    df_dict[file] = df
-#    
-#
-#
-#df = pd.concat((pd.read_csv(f) for f in files))    
-#
-#df.columns = columns
-
-
-df1 = pd.read_csv("data/file1.csv", names = columns, header=0)
-df1['source'] = 1
-
-df2 = pd.read_csv("data/file2.csv", names = columns, header=0)
-df2['source'] = 2
-
-df3 = pd.read_csv("data/file3.csv", names = columns, header=0)
-df3['source'] = 3
-
-df4 = pd.read_csv("data/file4.csv", names = columns, header=0)
-df4['source'] = 4
-
-df5 = pd.read_csv("data/file5.csv", names = columns, header=0)
-df5['source'] = 5
-
-df6 = pd.read_csv("data/file6.csv", names = columns, header=0)
-df6['source'] = 6
-
-df7 = pd.read_csv("data/file7.csv", names = columns, header=0)
-df7['source'] = 7
-
-df8 = pd.read_csv("data/file8.csv", names = columns, header=0)
-df8['source'] = 8
-
-df9 = pd.read_csv("data/file9.csv", names = columns, header=0)
-df9['source'] = 9
+df_dict = read_files(files, columns)
+    
 
 
 #A few checks for overlaps
 
-overlap(df1, df2, 'sku')
+overlap(df_dict['df1'], df_dict['df2'], 'sku')
 
-overlap(df1, df9, 'sku')
+overlap(df_dict['df1'], df_dict['df9'], 'sku')
 
-overlap(df1, df6, 'brand')
+overlap(df_dict['df1'], df_dict['df6'], 'brand')
+
+overlap(df_dict['df4'], df_dict['df7'], 'bill')
+
+
+df = pd.concat(df for df in df_dict.values())
+    
+
+
+
+
 
 
 #Reasonable to assume that separate df files can be merged into a bigger df
