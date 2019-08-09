@@ -17,6 +17,8 @@ import seaborn as sns
 import datetime
 import numpy as np
 
+from helper import read_files, overlap
+
 files = glob.glob("data/*.csv")
 
 columns = ['sku', 'brand', 'cat', 'bill', 'store', 'date', 'type', 'mrp', 'price', 'qty']
@@ -46,7 +48,7 @@ df = pd.concat(df for df in df_dict.values())
 
 #Reasonable to assume that separate df files can be merged into a bigger df
 
-df = pd.concat([df1, df2, df3, df4, df5, df6, df7, df8, df9])
+#df = pd.concat([df1, df2, df3, df4, df5, df6, df7, df8, df9])
 
 
 
@@ -133,6 +135,12 @@ agg_sales = sales.groupby('store')['qty'].agg('sum')
 
 zero_sales = df[df['qty'] == 0]
 
+zero_sales_skus = zero_sales.sku.unique()
+
+
+for sku in zero_sales_skus:
+    print(set(df[df['sku'] == sku]['price']))
+
 
 #They make no sense, so removing
 df = df[df['qty'] != 0]
@@ -172,6 +180,44 @@ df['dayofweek'] = pd.DatetimeIndex(df['date']).day_name()
 weekend_days = ['Saturday', 'Sunday']
 
 df['weekend'] = np.where(df['dayofweek'].isin(weekend_days), 1, 0)
+
+
+
+# See if price is greater than MRP (overcharging)
+
+overcharged = df[df['price'] > df['mrp'] ]
+
+zero_mrp = df[df['mrp'] == 0]
+
+zero_mrp_skus = zero_mrp.sku.unique().tolist()
+
+#Are these SKUs given out for zero mrp every time? 
+
+zero_mrp_skus_avg_mrps = df[(df['sku'].isin(zero_mrp_skus)) & (df['mrp'] != 0)].groupby('sku')['mrp'].agg(lambda x : np.mean(x))
+
+
+
+
+
+
+aa = []
+
+for sku, avg in zero_mrp_skus_avg_mrps.items():
+    df.loc[(df['sku'] == sku) & (df['mrp'] == 0), ['mrp']] = avg
+
+df[(df['sku'].isin(zero_mrp_skus)) & (df['mrp'] == 0)]['mrp']
+
+
+df['total'] = df['price'] * df['qty']
+
+df['discount'] = df['mrp'] - df['price']
+
+# We see negative discounts and discounts above 100% (which means money has been given back)
+
+df['perc_discount'] = ((df['mrp'] - df['price']) / df['mrp']) * 100
+
+
+
 
 #df['date'] = df['date'].astype('datetime64')
 
