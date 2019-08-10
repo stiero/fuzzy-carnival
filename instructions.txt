@@ -25,3 +25,16 @@ We need you to forecast the weekly demand (sales qty) for Store 5. Here, you wil
 take reasonable assumptions regarding some features and apply some thoughts around what 
 features to create and which technique to use (ARIMA/ARIMAX vs. Linear Regression vs. 
 Decision Trees vs. LSTM). Pls share your feature engineering and choice of technique along with the rationale for it.
+
+
+#Notes- 
+
+Transaction count - by store, category, sale type, qty
+
+Total quantity - by store, category
+
+Total revenue - by store, cateogry
+
+
+
+Average transaction value = total revenue / number of transactions

@@ -67,6 +67,11 @@ df['store'] = df['store'].apply(lambda x: x[-1])
 
 
 
+# Checking for duplicated values
+
+df.duplicated(keep='first').sum()
+
+df = df.drop_duplicates(keep="first")
 
 
 
@@ -187,6 +192,18 @@ df['weekend'] = np.where(df['dayofweek'].isin(weekend_days), 1, 0)
 
 overcharged = df[df['price'] > df['mrp'] ]
 
+#Overcharging does happen on 1665 transactions. Some of these SKUs have MRP = 0.
+#
+#One possible explanation for this is that these SKUs were intended to be discounted, but were sold at a higher price, mistakenly or otherwise
+#
+#For the sake of simplicity, we rectify it by forcing the price and mrp to be equal. 
+
+
+
+df['mrp'] = np.where(df.price > df.mrp, df.price, df.mrp)
+
+
+
 zero_mrp = df[df['mrp'] == 0]
 
 zero_mrp_skus = zero_mrp.sku.unique().tolist()
@@ -199,8 +216,6 @@ zero_mrp_skus_avg_mrps = df[(df['sku'].isin(zero_mrp_skus)) & (df['mrp'] != 0)].
 
 
 
-
-aa = []
 
 for sku, avg in zero_mrp_skus_avg_mrps.items():
     df.loc[(df['sku'] == sku) & (df['mrp'] == 0), ['mrp']] = avg
@@ -228,11 +243,13 @@ df['perc_discount'] = ((df['mrp'] - df['price']) / df['mrp']) * 100
 #df1['Sale Date'] = pd.to_datetime(df1['Sale Date'])
 
 
-df = df.sort_values(by='date')
+df_sales_days = df.groupby('date')['qty'].sum()
+
+df_date_sorted = df.sort_values(by='date')
 
 dates = df['date'].unique().tolist()
 
 
-dates = list(df1['Sale Date'])
+#dates = list(df1['Sale Date'])
 
-sns.tsplot(data = df1['Sales Qty'], time = df1['Sale Date'])
+sns.lineplot(data = df_sales_days)
