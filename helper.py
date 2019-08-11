@@ -6,6 +6,8 @@ Created on Thu Aug  8 13:00:20 2019
 @author: msr
 """
 import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 
 def read_files(files, columns):
@@ -33,5 +35,24 @@ def overlap(df1, df2, column):
     
     else:
         return "There is no overlap"
+    
+    
+def barplot(df, groupby_col, metric, axis):
+    
+    df_summarised = df.groupby([groupby_col])[metric].sum().sort_values(ascending=False).to_frame()
+
+    df_summarised = df_summarised.head(20)
+
+    plot = sns.barplot(x = df_summarised.index.get_level_values(0), 
+                       y=df_summarised[metric],
+                       ax=axis)
+    
+    plot.set_xlabel(groupby_col, fontsize = 20)
+    
+    plot.set_ylabel(metric, fontsize = 20)
+    
+    plot.set_xticklabels(plot.get_xticklabels(), rotation=45);
+    
+    return df_summarised, plot
     
     

@@ -65,6 +65,29 @@ df = pd.concat(df for df in df_dict.values())
 df['store'] = df['store'].apply(lambda x: x[-1])
 
 
+df['total'] = df['price'] * df['qty']
+
+df['discount'] = df['mrp'] - df['price']
+
+# We see negative discounts and discounts above 100% (which means money has been given back)
+
+df['perc_discount'] = ((df['mrp'] - df['price']) / df['mrp']) * 100
+
+
+df['date'] = pd.to_datetime(df['date'])
+
+df['day'] = pd.DatetimeIndex(df['date']).day
+
+df['month'] = pd.DatetimeIndex(df['date']).month_name()
+
+df['dayofweek'] = pd.DatetimeIndex(df['date']).day_name()
+
+
+weekend_days = ['Saturday', 'Sunday']
+
+df['weekend'] = np.where(df['dayofweek'].isin(weekend_days), 1, 0)
+
+
 
 
 # Checking for duplicated values
@@ -87,6 +110,10 @@ df[df['cat'].isnull()]
 df.loc[df['brand'].isnull(), 'brand'] = 'UnkBRAND'
 
 df.loc[df['cat'].isnull(), 'cat'] = 'UnkCAT'
+
+
+
+
 
 
 
@@ -173,18 +200,7 @@ stats.f_oneway(df['qty'][df['store'] == 'Store 1'], df['qty'][df['store'] == 'St
 
 # Fixing the date
 
-df['date'] = pd.to_datetime(df['date'])
 
-df['day'] = pd.DatetimeIndex(df['date']).day
-
-df['month'] = pd.DatetimeIndex(df['date']).month_name()
-
-df['dayofweek'] = pd.DatetimeIndex(df['date']).day_name()
-
-
-weekend_days = ['Saturday', 'Sunday']
-
-df['weekend'] = np.where(df['dayofweek'].isin(weekend_days), 1, 0)
 
 
 
@@ -223,13 +239,7 @@ for sku, avg in zero_mrp_skus_avg_mrps.items():
 df[(df['sku'].isin(zero_mrp_skus)) & (df['mrp'] == 0)]['mrp']
 
 
-df['total'] = df['price'] * df['qty']
 
-df['discount'] = df['mrp'] - df['price']
-
-# We see negative discounts and discounts above 100% (which means money has been given back)
-
-df['perc_discount'] = ((df['mrp'] - df['price']) / df['mrp']) * 100
 
 
 
@@ -253,3 +263,15 @@ dates = df['date'].unique().tolist()
 #dates = list(df1['Sale Date'])
 
 sns.lineplot(data = df_sales_days)
+
+
+
+#######Transaction count by store
+
+trans_count = df.groupby(['sku', 'cat'])['qty'].sum().sort_values(ascending=False).to_frame()
+
+trans_count = trans_count.head(100)
+
+trans_count_by_qty = sns.barplot(x = trans_count.index, y=trans_count['qty'])
+plt.xticks(rotation=45)
+
