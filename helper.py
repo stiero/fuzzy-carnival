@@ -5,6 +5,7 @@ Created on Thu Aug  8 13:00:20 2019
 
 @author: msr
 """
+import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -54,5 +55,49 @@ def barplot(df, groupby_col, metric, axis):
     plot.set_xticklabels(plot.get_xticklabels(), rotation=45);
     
     return df_summarised, plot
+
+
+
+def week_number_from_start(df, start_year=0, to_add=0):
     
+    week_number = []
+    
+    year_count = start_year - 1
+    
+
+    for date in df.date.sort_values().unique():
+        
+        date = pd.to_datetime(date)
+        
+        if date.day == 1 and date.month == 1:
+            year_count += 1
+            
+            if year_count > start_year: 
+                to_add += 52
+                
+        week_number.append(df[df['date'] == date]['date'].dt.week.unique()[0] + to_add)
+    
+    return week_number
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+                
+            
+        
+
     

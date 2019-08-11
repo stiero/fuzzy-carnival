@@ -87,6 +87,8 @@ weekend_days = ['Saturday', 'Sunday']
 
 df['weekend'] = np.where(df['dayofweek'].isin(weekend_days), 1, 0)
 
+df['weekno'] = df.date.dt.week
+
 
 
 
@@ -275,3 +277,18 @@ trans_count = trans_count.head(100)
 trans_count_by_qty = sns.barplot(x = trans_count.index, y=trans_count['qty'])
 plt.xticks(rotation=45)
 
+
+
+
+#########
+
+
+
+
+from datetime import datetime, timedelta
+
+last_day = 
+
+aa = df.sort_values(by='date')
+
+weekly_sell_rate = df.groupby(['sku', 'weekno'])['qty'].sum()
