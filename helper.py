@@ -38,9 +38,13 @@ def overlap(df1, df2, column):
         return "There is no overlap"
     
     
-def barplot(df, groupby_col, metric, axis):
+def barplot(df, groupby_col, metric, summary_type, axis):
     
-    df_summarised = df.groupby([groupby_col])[metric].sum().sort_values(ascending=False).to_frame()
+    if summary_type == "sum":
+        df_summarised = df.groupby([groupby_col])[metric].sum().sort_values(ascending=False).to_frame()
+
+    elif summary_type == "avg":
+        df_summarised = df.groupby([groupby_col])[metric].mean().sort_values(ascending=False).to_frame()
 
     df_summarised = df_summarised.head(20)
 
