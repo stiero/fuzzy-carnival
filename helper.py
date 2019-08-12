@@ -38,7 +38,11 @@ def overlap(df1, df2, column):
         return "There is no overlap"
     
     
-def barplot(df, groupby_col, metric, summary_type, axis):
+
+    
+def barplot(df, groupby_col, metric, summary_type, axis, **kwargs):
+    
+    size = 52
     
     if summary_type == "sum":
         df_summarised = df.groupby([groupby_col])[metric].sum().sort_values(ascending=False).to_frame()
@@ -46,7 +50,7 @@ def barplot(df, groupby_col, metric, summary_type, axis):
     elif summary_type == "avg":
         df_summarised = df.groupby([groupby_col])[metric].mean().sort_values(ascending=False).to_frame()
 
-    df_summarised = df_summarised.head(20)
+    df_summarised = df_summarised.head(size)
 
     plot = sns.barplot(x = df_summarised.index.get_level_values(0), 
                        y=df_summarised[metric],
@@ -59,6 +63,7 @@ def barplot(df, groupby_col, metric, summary_type, axis):
     plot.set_xticklabels(plot.get_xticklabels(), rotation=45);
     
     return df_summarised, plot
+
 
 
 
@@ -84,7 +89,19 @@ def week_number_from_start(df, start_year=0, to_add=0):
     return week_number
             
             
+
+
+def other_products(df, sku):
+    
+    bills = df[df['sku'] == sku]['bill'].unique()
+  
+    skus = df[df['bill'].isin(bills)]['sku'].unique().tolist()
+    
+    skus.remove(sku)     
+    
+    return skus
             
+      
             
             
             
