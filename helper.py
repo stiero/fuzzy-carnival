@@ -73,10 +73,13 @@ def week_number_from_start(df, start_year=0, to_add=0):
     
     year_count = start_year - 1
     
+    dates = []
 
     for date in df.date.sort_values().unique():
         
         date = pd.to_datetime(date)
+        
+        dates.append(date)
         
         if date.day == 1 and date.month == 1:
             year_count += 1
@@ -85,8 +88,14 @@ def week_number_from_start(df, start_year=0, to_add=0):
                 to_add += 52
                 
         week_number.append(df[df['date'] == date]['date'].dt.week.unique()[0] + to_add)
+        
+    for i, j in zip(dates, week_number):
+        
+        df.loc[df['date'] == i, 'weeks_from_start'] = j 
+        
+        df['weeks_from_start'] = df['weeks_from_start'].astype(int)
     
-    return week_number
+    return df
             
             
 
