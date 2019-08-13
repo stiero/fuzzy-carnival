@@ -28,6 +28,7 @@ df_dict = read_files(files, columns)
 df = pd.concat(df for df in df_dict.values())
 df = df.drop(columns=['source'])
 
+
 df['store'] = df['store'].apply(lambda x: x[-1])
 
 
@@ -94,6 +95,14 @@ df['weeks_from_start'] = 0
 df = week_number_from_start(df)
 
 
+df = df.drop_duplicates(keep="first")
+
+
+
+qty_by_date = df.groupby(['date', 'sku'])['qty'].sum().reset_index()
+
+test = pd.merge(qty_by_date, df.drop_duplicates(subset=['date', 'sku']), 
+                on=['date', 'sku'], how='inner')
 
 
 df.dtypes
@@ -130,14 +139,18 @@ rolling = df.groupby('sku')['qty'].rolling(30, min_periods=1, on=list(df.date)).
 rolling = df.reset_index(drop=True).set_index('date').groupby('sku')['qty'].rolling(window=30, min_periods=1).sum()
 
 
-grouped = df.groupby('sku')
+grouped = test.groupby('sku')
+
+dates = pd.DataFrame(df.date.unique(), columns=['date'])
+
 
 for group in grouped.groups:
     frame = grouped.get_group(group)
+    frame = dates.merge(frame, on='date', how='left')
+    
     frame = frame.reset_index(drop=True).set_index('date')
-    frame['roll_30'] = frame['qty'].rolling(30, min_periods=1, on=pd.to_datetime(frame.index)).sum()
-
-
+    frame['roll_30'] = frame['qty_x'].rolling(30, min_periods=1).sum()
+    coll.append(frame)
 
 df['roll_30'] = df.qty.rolling(30, min_periods=1).sum()
 
