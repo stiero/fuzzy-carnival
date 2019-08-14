@@ -21,7 +21,19 @@ bb.index = pd.DatetimeIndex(bb.index)
 
 bb = bb.reindex(idx)
 
-bb = bb.resample('D').ffill().reset_index()
+#bb = bb.resample('D').ffill().reset_index()
+
+bb = bb.reset_index()
+
+bb = bb.rename(columns={"index": "date","qty_x": "qty"})
+
+bb['qty'] = bb['qty'].fillna(0)
+
+bb = bb.drop(columns=["qty_y", "bill"])
+
+bb['rolling'] = bb['qty'].rolling(30, min_periods=1).sum()
+
+bb = bb.dropna()
 
 
 

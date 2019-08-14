@@ -105,6 +105,7 @@ test = pd.merge(qty_by_date, df.drop_duplicates(subset=['date', 'sku']),
                 on=['date', 'sku'], how='inner')
 
 
+
 df.dtypes
 
 
@@ -112,12 +113,6 @@ df.dtypes
 #Creating more features
 
 #Price stratification
-
-price_levels = np.where(df.price < 10, 'low', 'medium')
-price_levels = np.where(df.price >100, 'high', 'medium')
-
-price_levels = pd.cut(df.price, [0, 10, 40, 200])
-
 
 
 #More than one item in bill
@@ -131,7 +126,7 @@ for index, value in bill_count.iterrows():
 df = df.drop(columns=['bill'])
 
 
-# Rolling sales for 3 days
+# Rolling sales for 30 days
 
 rolling = df.groupby('sku')['qty'].rolling(30, min_periods=1, on=list(df.date)).sum()
 
@@ -139,18 +134,50 @@ rolling = df.groupby('sku')['qty'].rolling(30, min_periods=1, on=list(df.date)).
 rolling = df.reset_index(drop=True).set_index('date').groupby('sku')['qty'].rolling(window=30, min_periods=1).sum()
 
 
+
+
+
+
+idx = pd.date_range(df.date.min(), df.date.max())
+
 grouped = test.groupby('sku')
 
-dates = pd.DataFrame(df.date.unique(), columns=['date'])
-
+final = pd.DataFrame()
 
 for group in grouped.groups:
     frame = grouped.get_group(group)
-    frame = dates.merge(frame, on='date', how='left')
     
-    frame = frame.reset_index(drop=True).set_index('date')
-    frame['roll_30'] = frame['qty_x'].rolling(30, min_periods=1).sum()
-    coll.append(frame)
+    frame = frame.set_index('date')
+    
+    frame = frame.reindex(idx)
+    
+    frame = frame.reset_index()
+    
+    frame = frame.rename(columns={"index": "date","qty_x": "qty"})
+
+    frame['qty'] = frame['qty'].fillna(0)
+
+    frame = frame.drop(columns=["qty_y", "bill"])
+    
+    frame['roll_30'] = frame['qty'].rolling(30, min_periods=1).sum()
+    
+    frame['roll_60'] = frame['qty'].rolling(60, min_periods=1).sum()
+    
+    frame['roll_90'] = frame['qty'].rolling(90, min_periods=1).sum()
+    
+    frame = frame.dropna()
+    
+    final = pd.concat([final, frame], axis=0)
+
+
+final = final.sort_values('date').reset_index().drop(columns=['index'])
+
+
+
+    
+#    frame = frame.reset_index(drop=True).set_index('date')
+#    frame['roll_30'] = frame['qty_x'].rolling(30, min_periods=1).sum()
+#    coll.append(frame)
 
 df['roll_30'] = df.qty.rolling(30, min_periods=1).sum()
 
