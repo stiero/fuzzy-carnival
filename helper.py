@@ -113,7 +113,16 @@ def other_products(df, sku):
       
             
             
-            
+def rmse(preds, y_test):
+    
+    sq_errors = (preds - y_test)**2
+    
+    mean_sq_error = sq_errors.mean()
+    
+    root_mean_sq_error = np.sqrt(mean_sq_error)
+    
+    return root_mean_sq_error
+    
             
             
             

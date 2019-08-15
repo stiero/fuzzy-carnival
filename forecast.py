@@ -19,6 +19,9 @@ import numpy as np
 
 from helper import read_files
 
+from sklearn.metrics import mean_squared_error
+
+
 files = glob.glob("data/*.csv")
 
 columns = ['sku', 'brand', 'cat', 'bill', 'store', 'date', 'type', 'mrp', 'price', 'qty']
@@ -54,7 +57,7 @@ df['day'] = pd.DatetimeIndex(df['date']).day
 
 df['month'] = pd.DatetimeIndex(df['date']).month_name()
 
-df['month_year'] = df.date.dt.to_period('M')
+#df['month_year'] = df.date.dt.to_period('M')
 
 df['dayofweek'] = pd.DatetimeIndex(df['date']).day_name()
 
@@ -73,7 +76,7 @@ df['mrp'] = np.where(df.price > df.mrp, df.price, df.mrp)
 
 df =  df[df['mrp'] != 0]
 
-df = df[df['type'] == 'Sale']
+#df = df[df['type'] == 'Sale']
 
 
 
@@ -88,11 +91,11 @@ df['perc_discount'] = np.where(df['perc_discount'] == -np.inf, 0, df['perc_disco
 
 
 
-from helper import week_number_from_start
+#from helper import week_number_from_start
 
-df['weeks_from_start'] = 0
+#df['weeks_from_start'] = 0
 
-df = week_number_from_start(df)
+#df = week_number_from_start(df)
 
 
 df = df.drop_duplicates(keep="first")
@@ -101,7 +104,7 @@ df = df.drop_duplicates(keep="first")
 
 qty_by_date = df.groupby(['date', 'sku'])['qty'].sum().reset_index()
 
-test = pd.merge(qty_by_date, df.drop_duplicates(subset=['date', 'sku']), 
+df = pd.merge(qty_by_date, df.drop_duplicates(subset=['date', 'sku']), 
                 on=['date', 'sku'], how='inner')
 
 
@@ -121,17 +124,17 @@ bill_count = df.groupby('bill').count().iloc[:,1].to_frame()
 
 
 for index, value in bill_count.iterrows():
-    df.loc[df['bill'] == index, 'bill_count'] = int(value[0])
+    df.loc[df['bill'] == index, 'bill_item_count'] = int(value[0])
     
 df = df.drop(columns=['bill'])
 
 
 # Rolling sales for 30 days
 
-rolling = df.groupby('sku')['qty'].rolling(30, min_periods=1, on=list(df.date)).sum()
-
-
-rolling = df.reset_index(drop=True).set_index('date').groupby('sku')['qty'].rolling(window=30, min_periods=1).sum()
+#rolling = df.groupby('sku')['qty'].rolling(30, min_periods=1, on=list(df.date)).sum()
+#
+#
+#rolling = df.reset_index(drop=True).set_index('date').groupby('sku')['qty'].rolling(window=30, min_periods=1).sum()
 
 
 
@@ -140,7 +143,7 @@ rolling = df.reset_index(drop=True).set_index('date').groupby('sku')['qty'].roll
 
 idx = pd.date_range(df.date.min(), df.date.max())
 
-grouped = test.groupby('sku')
+grouped = df.groupby('sku')
 
 final = pd.DataFrame()
 
@@ -157,7 +160,7 @@ for group in grouped.groups:
 
     frame['qty'] = frame['qty'].fillna(0)
 
-    frame = frame.drop(columns=["qty_y", "bill"])
+    frame = frame.drop(columns=["qty_y"])
     
     frame['roll_30'] = frame['qty'].rolling(30, min_periods=1).sum()
     
@@ -172,6 +175,44 @@ for group in grouped.groups:
 
 final = final.sort_values('date').reset_index().drop(columns=['index'])
 
+#final.to_csv("final.csv",  index=False)
+
+final = pd.read_csv("final.csv")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+cat_cols = ['sku', 'brand', 'cat', 'store', 'type', 'day', 'month', 'dayofweek', 
+            'weekend', 'weekno']
+
+#test = final.copy()
+
+for col in cat_cols:
+    final = pd.concat([final, pd.get_dummies(final[col], drop_first=True,
+                                             prefix=col)], axis=1)
+    del final[col]
+    
+
+
+#skus = final.sku.nunique()
+#
+#from sklearn.feature_extraction import FeatureHasher
+#
+#hasher = FeatureHasher(n_features=skus, input_type='string')
+#
+#aa = hasher.transform(test['sku'])
 
 
     
@@ -179,10 +220,178 @@ final = final.sort_values('date').reset_index().drop(columns=['index'])
 #    frame['roll_30'] = frame['qty_x'].rolling(30, min_periods=1).sum()
 #    coll.append(frame)
 
-df['roll_30'] = df.qty.rolling(30, min_periods=1).sum()
+#df['roll_30'] = df.qty.rolling(30, min_periods=1).sum()
 
 
-rolling = df.reset_index(drop=True).set_index('date').groupby('sku')['qty'].rolling(window=30, min_periods=1, 
-                        o).sum()
+#rolling = df.reset_index(drop=True).set_index('date').groupby('sku')['qty'].rolling(window=30, min_periods=1, 
+#                        o).sum()
+
+
+
+cutoff_date = '2018-02-01'
+
+X_train = final[final['date'] < cutoff_date]
+
+X_test = final[final['date'] >= cutoff_date]
+
+del final['date']
+del X_train['date']
+del X_test['date']
+
+y_train = X_train['qty']
+y_test = X_test['qty']
+
+del X_train['qty']
+del X_test['qty']
+
+
+
+
+
+
+
+from sklearn.preprocessing import StandardScaler
+
+sc = StandardScaler()
+
+scale_cols = ['mrp', 'total', 'price', 'discount', 'perc_discount']
+
+for col in scale_cols:
+    sc.fit(np.array(X_train[col]).reshape(-1, 1))
+    
+    X_train[col] = sc.transform(np.array(X_train[col]).reshape(-1,1))
+    
+    X_test[col] = sc.transform(np.array(X_test[col]).reshape(-1,1))
+    
+    
+
+
+
+
+X_train = X_train.to_numpy()
+y_train = y_train.to_numpy()
+
+
+X_test = X_test.to_numpy()
+y_test = y_test.to_numpy()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+from sklearn.linear_model import LinearRegression
+
+lr = LinearRegression()
+
+lr_model = lr.fit(X_train, y_train)
+
+lr_preds = lr_model.predict(X_test)
+
+
+lr_score = lr_model.score(X_test, y_test)
+
+
+
+
+
+#
+#
+#from sklearn.preprocessing import PolynomialFeatures
+#
+#
+#poly = PolynomialFeatures(degree=2)
+#
+#X_train = poly.fit_transform(X_train)
+#    
+#y_train = poly.fit_transform(y_train)
+
+
+from helper import rmse
+
+
+from sklearn.ensemble import RandomForestRegressor
+
+rf = RandomForestRegressor(max_depth=20, random_state=0,
+                           n_estimators=2000, oob_score=True,
+                           n_jobs=-1, verbose=0,
+                           max_features='auto')
+
+rf_model = rf.fit(X_train, y_train)
+
+rf_pred = rf.predict(X_test)
+
+rf_score = rf.score(X_test, y_test)
+
+rmse(rf_pred, y_test), rf_model.oob_score_, rf_score
+
+mean_squared_error(y_test, rf_pred)
+
+
+
+
+
+#xgbMatrix_train = xgb.DMatrix(data=X_train, label=y_train)
+#
+#xgbMatrix_test = xgb.DMatrix(data=X_test)
+#
+#
+#params = {'max_depth': 2, 'eta': 0.5, 'silent': 1, 'objective': 'reg:squarederror',
+#          'nthread': 4, 'colsample_bytree': 0.7, 'subsample': 0.5, 
+#          'scale_pos_weight': 1, 'gamma': 5, 'learning_rate': 0.02,
+#          'num_boost_round': 100}
+#
+#
+#xgb_model = xgb.train(params, xgbMatrix_train)
+#
+#
+#xgb_pred = xgb_model.predict(xgbMatrix_test)
+#
+#rmse(xgb_pred, y_test)
+
+import xgboost as xgb
+
+xg_reg = xgb.XGBRegressor(max_depth= 5, eta= 0.5, silent= 1, 
+                          objective= 'reg:squarederror', nthread= 4, 
+                          colsample_bytree= 0.7, subsample= 0.5, 
+                          scale_pos_weight= 1, gamma= 5, learning_rate= 0.05, 
+                          num_boost_round= 100)
+
+
+xgb_model = xg_reg.fit(X_train, y_train)
+
+xgb_pred = xgb_model.predict(X_test)
+
+mean_squared_error(y_test, xgb_pred)
+
+
+
+xg_reg = xgb.XGBRegressor(objective ='reg:squarederror', colsample_bytree = 0.3, learning_rate = 0.4,
+                max_depth = 5, alpha = 10, n_estimators = 1000)
+
+xgb_model = xg_reg.fit(X_train, y_train)
+
+xgb_pred = xgb_model.predict(X_test)
+
+
+rmse(xgb_pred, y_test)
+
+
+
+
+
+
+
+
+
+
 
 
