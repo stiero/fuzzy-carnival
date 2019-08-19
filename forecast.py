@@ -21,6 +21,11 @@ from helper import read_files
 
 from sklearn.metrics import mean_squared_error
 
+from tqdm import tqdm
+tqdm.pandas(desc="progress-bar")
+
+import statistics
+
 
 files = glob.glob("data/*.csv")
 
@@ -108,6 +113,11 @@ df = pd.merge(qty_by_date, df.drop_duplicates(subset=['date', 'sku']),
                 on=['date', 'sku'], how='inner')
 
 
+df = df.rename(columns={"qty_x": "qty"})
+
+df = df.drop(columns=["qty_y"])
+
+
 
 df.dtypes
 
@@ -123,7 +133,7 @@ df.dtypes
 bill_count = df.groupby('bill').count().iloc[:,1].to_frame()
 
 
-for index, value in bill_count.iterrows():
+for index, value in tqdm(bill_count.iterrows()):
     df.loc[df['bill'] == index, 'bill_item_count'] = int(value[0])
     
 df = df.drop(columns=['bill'])
@@ -140,14 +150,13 @@ df = df.drop(columns=['bill'])
 
 
 
-
 idx = pd.date_range(df.date.min(), df.date.max())
 
 grouped = df.groupby('sku')
 
 final = pd.DataFrame()
 
-for group in grouped.groups:
+for group in tqdm(grouped.groups):
     frame = grouped.get_group(group)
     
     frame = frame.set_index('date')
@@ -156,11 +165,27 @@ for group in grouped.groups:
     
     frame = frame.reset_index()
     
-    frame = frame.rename(columns={"index": "date","qty_x": "qty"})
+    frame = frame.rename(columns={"index": "date"})
+    
+    frame_cat = frame['cat'].unique()
+    
+    frame_sku = frame['sku'].unique()
+    
+    frame_brand = frame('brand').unque()
 
     frame['qty'] = frame['qty'].fillna(0)
-
-    frame = frame.drop(columns=["qty_y"])
+    
+    frame['sku'] = frame['sku'].fillna(frame_sku)
+    
+    frame['cat'] = frame['cat'].fillna(frame_cat)
+    
+    frame['brand'] = frame['brand'].fillna(frame_brand)
+    
+    frame['mrp'] = frame['mrp'].fillna(frame['mrp'], method='ffill')
+    
+    frame['price'] = frame['price'].fillna(frame['mrp'], method='ffill')
+    
+    frame['bill_item_count'] = frame['bill_item_count'].fillna(frame['bill_item_count'], method='ffill')
     
     frame['roll_30'] = frame['qty'].rolling(30, min_periods=1).sum()
     
@@ -168,22 +193,24 @@ for group in grouped.groups:
     
     frame['roll_90'] = frame['qty'].rolling(90, min_periods=1).sum()
     
-    frame = frame.dropna()
+    #frame = frame.dropna()
     
     final = pd.concat([final, frame], axis=0)
 
 
 final = final.sort_values('date').reset_index().drop(columns=['index'])
 
-#final.to_csv("final.csv",  index=False)
+final.to_csv("final_all_dates.csv",  index=False)
 
-final = pd.read_csv("final.csv")
-
-
+#final = pd.read_csv("final_all_dates.csv")
 
 
 
 
+
+skus = final.sku.unique()
+
+dates = final.date.unique()
 
 
 
@@ -199,11 +226,14 @@ cat_cols = ['sku', 'brand', 'cat', 'store', 'type', 'day', 'month', 'dayofweek',
 
 #test = final.copy()
 
-for col in cat_cols:
+for col in tqdm(cat_cols):
     final = pd.concat([final, pd.get_dummies(final[col], drop_first=True,
                                              prefix=col)], axis=1)
     del final[col]
     
+
+
+
 
 
 #skus = final.sku.nunique()
@@ -256,7 +286,7 @@ sc = StandardScaler()
 
 scale_cols = ['mrp', 'total', 'price', 'discount', 'perc_discount']
 
-for col in scale_cols:
+for col in tqdm(scale_cols):
     sc.fit(np.array(X_train[col]).reshape(-1, 1))
     
     X_train[col] = sc.transform(np.array(X_train[col]).reshape(-1,1))
@@ -321,7 +351,7 @@ from helper import rmse
 from sklearn.ensemble import RandomForestRegressor
 
 rf = RandomForestRegressor(max_depth=20, random_state=0,
-                           n_estimators=2000, oob_score=True,
+                           n_estimators=20, oob_score=True,
                            n_jobs=-1, verbose=0,
                            max_features='auto')
 
@@ -383,6 +413,41 @@ xgb_pred = xgb_model.predict(X_test)
 
 
 rmse(xgb_pred, y_test)
+
+
+
+
+skus = final.sku.unique()
+
+#def train_generator(final, skus):
+#    final_sku = final
+
+
+
+
+from keras.models import Sequential
+from keras.layers import LSTM, GRU, Flatten, Dense
+from keras.optimizers import RMSprop
+
+model = Sequential()
+model.add(Dense(32, input_shape=X_train.shape))
+model.add(Dense(1))
+
+model.compile(optimizer=RMSprop(), loss='mae')
+
+history = model.fit(X_train,
+                    epochs=1,
+                    batch_size=3200)
+
+
+
+
+
+
+
+
+
+
 
 
 
