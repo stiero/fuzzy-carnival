@@ -159,6 +159,18 @@ final = pd.DataFrame()
 for group in tqdm(grouped.groups):
     frame = grouped.get_group(group)
     
+    frame_cat = frame['cat'].unique()[0]
+    
+    frame_cat = frame['cat'].unique()[0]
+    
+    frame_sku = frame['sku'].unique()[0]
+    
+    frame_brand = frame['brand'].unique()[0]
+
+
+
+
+    
     frame = frame.set_index('date')
     
     frame = frame.reindex(idx)
@@ -167,11 +179,8 @@ for group in tqdm(grouped.groups):
     
     frame = frame.rename(columns={"index": "date"})
     
-    frame_cat = frame['cat'].unique()
     
-    frame_sku = frame['sku'].unique()
     
-    frame_brand = frame('brand').unque()
 
     frame['qty'] = frame['qty'].fillna(0)
     
@@ -181,11 +190,11 @@ for group in tqdm(grouped.groups):
     
     frame['brand'] = frame['brand'].fillna(frame_brand)
     
-    frame['mrp'] = frame['mrp'].fillna(frame['mrp'], method='ffill')
+    frame['mrp'] = frame['mrp'].fillna(method='ffill')
     
-    frame['price'] = frame['price'].fillna(frame['mrp'], method='ffill')
+    frame['price'] = frame['price'].fillna(method='ffill')
     
-    frame['bill_item_count'] = frame['bill_item_count'].fillna(frame['bill_item_count'], method='ffill')
+    frame['bill_item_count'] = frame['bill_item_count'].fillna(method='ffill')
     
     frame['roll_30'] = frame['qty'].rolling(30, min_periods=1).sum()
     
@@ -193,14 +202,14 @@ for group in tqdm(grouped.groups):
     
     frame['roll_90'] = frame['qty'].rolling(90, min_periods=1).sum()
     
-    #frame = frame.dropna()
+    frame = frame.dropna()
     
     final = pd.concat([final, frame], axis=0)
 
 
 final = final.sort_values('date').reset_index().drop(columns=['index'])
 
-final.to_csv("final_all_dates.csv",  index=False)
+#final.to_csv("final_all_dates.csv",  index=False)
 
 #final = pd.read_csv("final_all_dates.csv")
 
@@ -264,7 +273,7 @@ X_train = final[final['date'] < cutoff_date]
 
 X_test = final[final['date'] >= cutoff_date]
 
-del final['date']
+#del final['date']
 del X_train['date']
 del X_test['date']
 
@@ -289,21 +298,22 @@ scale_cols = ['mrp', 'total', 'price', 'discount', 'perc_discount']
 for col in tqdm(scale_cols):
     sc.fit(np.array(X_train[col]).reshape(-1, 1))
     
-    X_train[col] = sc.transform(np.array(X_train[col]).reshape(-1,1))
+    X_train[col] = sc.transform(np.array(X_train[col]).reshape(-1,1)).astype(np.float16)
     
-    X_test[col] = sc.transform(np.array(X_test[col]).reshape(-1,1))
+    X_test[col] = sc.transform(np.array(X_test[col]).reshape(-1,1)).astype(np.float16)
     
     
+
 
 
 
 
 X_train = X_train.to_numpy()
-y_train = y_train.to_numpy()
+y_train = y_train.to_numpy(dtype="int")
 
 
 X_test = X_test.to_numpy()
-y_test = y_test.to_numpy()
+y_test = y_test.to_numpy(dtype="int")
 
 
 
@@ -329,6 +339,40 @@ lr_preds = lr_model.predict(X_test)
 
 lr_score = lr_model.score(X_test, y_test)
 
+mean_squared_error(y_test, lr_preds)
+
+
+
+
+
+
+
+
+
+
+import statsmodels.api as sm
+
+import statsmodels.formula.api as smf
+
+from statsmodels.stats.outliers_influence import variance_inflation_factor
+
+
+lr = sm.OLS(y_train, X_train)
+
+lr_model = lr.fit()
+
+lr_preds = lr_model.predict(X_test)
+
+lr_preds.summary()
+
+
+# For each X, calculate VIF and save in dataframe
+vif = pd.DataFrame()
+vif["VIF Factor"] = [variance_inflation_factor(X_train, i) for i in range(X_train.shape[1])]
+vif["features"] = X_train.columns
+
+
+
 
 
 
@@ -351,7 +395,7 @@ from helper import rmse
 from sklearn.ensemble import RandomForestRegressor
 
 rf = RandomForestRegressor(max_depth=20, random_state=0,
-                           n_estimators=20, oob_score=True,
+                           n_estimators=2000, oob_score=True,
                            n_jobs=-1, verbose=0,
                            max_features='auto')
 
@@ -423,24 +467,49 @@ skus = final.sku.unique()
 #    final_sku = final
 
 
+ndim = X_train.shape[-1]
 
 
 from keras.models import Sequential
-from keras.layers import LSTM, GRU, Flatten, Dense
-from keras.optimizers import RMSprop
+from keras.layers import LSTM, GRU, Flatten, Dense, Dropout
+from keras.optimizers import RMSprop, Adam
+from keras.callbacks import EarlyStopping
+from keras.utils  import to_categorical
+
+y_binary_train = to_categorical(y_train-1, num_classes=12)
+
+y_binary_test = to_categorical(y_test-1, num_classes=12)
+
+callbacks_list = [EarlyStopping(monitor='loss',
+                                patience=10)]
 
 model = Sequential()
-model.add(Dense(32, input_shape=X_train.shape))
+model.add(Dense(32, input_dim=ndim))
+model.add(Dense(64, activation='relu'))
+model.add(Dropout(0.2))
+model.add(Dense(32, activation='relu'))
+model.add(Dense(64, activation='relu'))
+model.add(Dropout(0.5))
+model.add(Dense(32, activation='relu'))
+model.add(Dense(64, activation='relu'))
 model.add(Dense(1))
+model.add(Dense(32, activation='relu'))
+model.add(Dense(64, activation='relu'))
+model.add(Dense(12, activation="softmax"))
 
-model.compile(optimizer=RMSprop(), loss='mae')
+model.compile(optimizer=Adam(), loss='categorical_crossentropy',
+              metrics = ['accuracy'])
 
-history = model.fit(X_train,
-                    epochs=1,
-                    batch_size=3200)
+history = model.fit(X_train, y_binary_train,
+                    epochs=300,
+                    batch_size=16,
+                    callbacks=callbacks_list)
 
 
+model_pred = model.predict(X_test)
 
+for actual, pred in zip(y_test, model_pred):
+    print(actual, np.argmax(pred))
 
 
 
