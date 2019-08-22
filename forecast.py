@@ -512,10 +512,10 @@ model_pred = model.predict(X_test)
 mappings = {}
 
 for actual, encoded in zip(y_train, y_binary_train):
-    mappings[str(actual)] = np.argmax(encoded)
+    mappings[str(np.argmax(encoded))] = actual
 
 for actual, pred in zip(y_test, model_pred):
-    print(actual, np.argmax(pred))
+    print(actual, mappings[str(np.argmax(pred))])
 
 
 
