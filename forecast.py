@@ -476,6 +476,8 @@ from keras.optimizers import RMSprop, Adam
 from keras.callbacks import EarlyStopping
 from keras.utils  import to_categorical
 
+
+
 y_binary_train = to_categorical(y_train-1, num_classes=12)
 
 y_binary_test = to_categorical(y_test-1, num_classes=12)
@@ -492,7 +494,6 @@ model.add(Dense(64, activation='relu'))
 model.add(Dropout(0.5))
 model.add(Dense(32, activation='relu'))
 model.add(Dense(64, activation='relu'))
-model.add(Dense(1))
 model.add(Dense(32, activation='relu'))
 model.add(Dense(64, activation='relu'))
 model.add(Dense(12, activation="softmax"))
@@ -507,6 +508,11 @@ history = model.fit(X_train, y_binary_train,
 
 
 model_pred = model.predict(X_test)
+
+mappings = {}
+
+for actual, encoded in zip(y_train, y_binary_train):
+    mappings[str(actual)] = np.argmax(encoded)
 
 for actual, pred in zip(y_test, model_pred):
     print(actual, np.argmax(pred))
