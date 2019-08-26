@@ -19,7 +19,7 @@ import numpy as np
 
 from helper import read_files
 
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error, accuracy_score, auc
 
 from tqdm import tqdm
 tqdm.pandas(desc="progress-bar")
@@ -392,9 +392,9 @@ vif["features"] = X_train.columns
 from helper import rmse
 
 
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import RandomForestClassifier
 
-rf = RandomForestRegressor(max_depth=20, random_state=0,
+rf = RandomForestClassifier(max_depth=20, random_state=0,
                            n_estimators=2000, oob_score=True,
                            n_jobs=-1, verbose=0,
                            max_features='auto')
